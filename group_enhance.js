@@ -1,1 +1,29 @@
-(()=>{const SB='https://braouypqkiuiwujcyaao.supabase.co',KEY='sb_publishable_cTw3hrZD4R3UnZ4fDVI_pw_8Gkzbzfn';async function load(){const host=document.getElementById('enCustomGroups');const search=document.getElementById('enSearch');if(!host||!search||document.getElementById('enAutoGroups'))return;let box=document.createElement('div');box.id='enAutoGroups';box.innerHTML='<div class="en-tree-head"><span>按研究方向</span><small>自动</small></div><div class="en-tree" id="enAutoTree"><div class="en-no-group">正在读取…</div></div>';host.parentNode.insertBefore(box,host);try{let r=await fetch(SB+'/rest/v1/papers?select=category&limit=1000',{headers:{apikey:KEY,Authorization:'Bearer '+KEY}});let rows=await r.json();let counts={};rows.forEach(x=>{let c=(x.category||'未分类').replace(/ · PubMed$/,'');counts[c]=(counts[c]||0)+1});let vals=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,12);document.getElementById('enAutoTree').innerHTML=vals.map(([c,n])=>`<button class="en-tree-item en-auto-group" data-cat="${encodeURIComponent(c)}"><span>◫ ${c}</span><em>${n}</em></button>`).join('')||'<div class="en-no-group">暂无方向</div>';document.querySelectorAll('.en-auto-group').forEach(b=>b.onclick=()=>{search.value=decodeURIComponent(b.dataset.cat);search.dispatchEvent(new Event('input',{bubbles:true}));document.querySelectorAll('.en-auto-group').forEach(x=>x.classList.remove('active'));b.classList.add('active')})}catch{document.getElementById('enAutoTree').innerHTML='<div class="en-no-group">读取失败</div>'}}let tries=0,t=setInterval(()=>{tries++;if(document.getElementById('enCustomGroups')){clearInterval(t);load()}else if(tries>40)clearInterval(t)},250);})();
+(()=>{
+  const SB='https://braouypqkiuiwujcyaao.supabase.co',KEY='sb_publishable_cTw3hrZD4R3UnZ4fDVI_pw_8Gkzbzfn';
+  function loadDirectionDesigner(){if(document.querySelector('script[src$="search_directions.js"]'))return;let s=document.createElement('script');s.src='./search_directions.js';s.defer=true;document.body.appendChild(s)}
+  async function load(){
+    const host=document.getElementById('enCustomGroups'),search=document.getElementById('enSearch');if(!host||!search)return;
+    if(!document.getElementById('enAutoGroups')){
+      let box=document.createElement('div');box.id='enAutoGroups';box.innerHTML='<div class="en-tree-head"><span>按研究方向</span><small>自动</small></div><div class="en-tree" id="enAutoTree"><div class="en-no-group">正在读取…</div></div>';
+      host.parentNode.insertBefore(box,host);
+    }
+    if(!document.getElementById('enSmartTopics')){
+      let smart=document.createElement('div');smart.id='enSmartTopics';smart.innerHTML='<div class="en-tree-head"><span>智能子项</span><small>快捷</small></div><div class="en-tree" id="enSmartTopicTree"></div>';
+      host.parentNode.insertBefore(smart,host);
+      const items=[
+        ['代谢组','metabolomics'],['成分分析','chemical constituents'],['微生物','microbiome'],['内生菌','endophyte'],['炮制加工','processing'],['发汗','sweating'],['褐变颜色','browning'],['PPO / POD','PPO'],['机制通路','mechanism'],['质量评价','quality'],['标志物','biomarker'],['产地品种','geographical origin'],['动物模型','mouse'],['细胞模型','cell'],['综述','review'],['PubMed来源','PubMed']
+      ];
+      document.getElementById('enSmartTopicTree').innerHTML=items.map(([n,q])=>`<button class="en-tree-item en-smart-topic" data-q="${encodeURIComponent(q)}"><span>◇ ${n}</span></button>`).join('');
+      document.querySelectorAll('.en-smart-topic').forEach(b=>b.onclick=()=>{search.value=decodeURIComponent(b.dataset.q);search.dispatchEvent(new Event('input',{bubbles:true}));document.querySelectorAll('.en-smart-topic,.en-auto-group').forEach(x=>x.classList.remove('active'));b.classList.add('active')});
+    }
+    try{
+      let r=await fetch(SB+'/rest/v1/papers?select=category&limit=1000',{headers:{apikey:KEY,Authorization:'Bearer '+KEY}}),rows=await r.json(),counts={};
+      rows.forEach(x=>{let c=(x.category||'未分类').replace(/ · PubMed$/,'');counts[c]=(counts[c]||0)+1});
+      let vals=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,16);
+      document.getElementById('enAutoTree').innerHTML=vals.map(([c,n])=>`<button class="en-tree-item en-auto-group" data-cat="${encodeURIComponent(c)}"><span>◫ ${c}</span><em>${n}</em></button>`).join('')||'<div class="en-no-group">暂无方向</div>';
+      document.querySelectorAll('.en-auto-group').forEach(b=>b.onclick=()=>{search.value=decodeURIComponent(b.dataset.cat);search.dispatchEvent(new Event('input',{bubbles:true}));document.querySelectorAll('.en-auto-group,.en-smart-topic').forEach(x=>x.classList.remove('active'));b.classList.add('active')});
+    }catch{document.getElementById('enAutoTree').innerHTML='<div class="en-no-group">读取失败</div>'}
+  }
+  loadDirectionDesigner();
+  let tries=0,t=setInterval(()=>{tries++;if(document.getElementById('enCustomGroups')){clearInterval(t);load()}else if(tries>50)clearInterval(t)},250);
+})();
