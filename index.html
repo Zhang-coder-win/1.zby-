@@ -7,6 +7,7 @@
 <title>论文雷达 · Research Radar</title>
 <link rel="stylesheet" href="./style.css">
 <link rel="stylesheet" href="./translate.css">
+<link rel="stylesheet" href="./coverage.css">
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 </head>
 <body>
@@ -51,7 +52,7 @@
           <div class="section-label">同步状态</div>
           <div class="sync-big"><i></i><span id="cloudStatusBig">正在连接云端</span></div>
           <div class="sync-line"><span>自动抓取频率</span><b>每 6 小时</b></div>
-          <div class="sync-line"><span>当前数据源</span><b>OpenAlex + 本地库</b></div>
+          <div class="sync-line"><span>当前数据源</span><b>OpenAlex + PubMed + 本地库</b></div>
           <div class="sync-line"><span>AI Token</span><b class="good">0</b></div>
           <button class="btn soft full" id="syncNowOverview">立即刷新显示</button>
         </section>
@@ -145,5 +146,8 @@
 <div class="toast" id="toast"></div>
 <script src="./app.js"></script>
 <script src="./translate.js"></script>
+<script src="./endnote.js"></script>
+<script src="./group_enhance.js"></script>
+<script src="./coverage.js"></script>
 </body>
 </html>
