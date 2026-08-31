@@ -1,15 +1,147 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>论文雷达 · Research Radar</title><link rel="stylesheet" href="./style.css"><script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script></head><body>
-<div class="wrap">
-<header class="hero"><div><span class="live"><i></i> Research Radar · Live</span><h1>论文雷达</h1><p>文献管理 + Word 导入 + 最新论文自动检索。当前版本不调用 AI，检索不会产生 AI token。</p><div class="heroBtns"><button class="btn white" id="addTop">＋ 添加论文</button><button class="btn glass" id="goFinder">🔎 自动找论文</button></div></div><div class="radar"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="beam"></div><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><b>LIVE<br>SCAN</b></div></header>
-<section class="stats"><div class="card stat"><small>论文总数</small><strong id="sTotal">0</strong><span id="lastUpdate">本地库未更新</span></div><div class="card stat"><small>高相关</small><strong id="sHigh">0</strong><span>优先精读</span></div><div class="card stat"><small>待读</small><strong id="sTodo">0</strong><span>等待处理</span></div><div class="card stat"><small>监控词</small><strong id="sWatch">0</strong><span id="findStatus">自动发现待运行</span></div></section>
-<div class="layout"><main>
-<section class="panel"><div class="head"><div><h2>论文库</h2><p>自动抓到、Word 导入和手工录入的论文统一放在这里。</p></div><div class="row"><button class="btn" id="add">添加论文</button><button class="btn soft" id="exportCsv">导出 CSV</button><button class="btn soft" id="backup">备份 JSON</button></div></div><div class="filters"><input id="q" placeholder="搜索题目、作者、关键词、DOI…"><select id="cat"><option value="">全部分类</option></select><select id="rel"><option value="">全部相关度</option><option>高</option><option>中</option><option>低</option></select><select id="st"><option value="">全部状态</option><option>待读</option><option>粗读</option><option>精读</option></select><span class="count" id="count">0 篇</span></div><div class="table"><table><thead><tr><th>论文</th><th>年份</th><th>分类</th><th>相关度</th><th>状态</th><th>期刊</th><th>操作</th></tr></thead><tbody id="tb"></tbody></table><div class="empty" id="empty">暂无论文。可以添加、导入 Word，或使用右侧“自动找论文”。</div></div></section>
-<section class="panel"><div class="head"><div><h2>导入 / 备份</h2><p>Word 推荐用表格：题目、作者、年份、期刊、DOI、链接、分类、相关度、状态、关键词、备注。</p></div></div><div class="imports"><label class="drop">📄<b>导入 Word</b><span>.docx 本地解析，不上传文件</span><input id="docx" type="file" accept=".docx"></label><label class="drop">📊<b>导入 CSV</b><span>自动按 DOI / 标题去重</span><input id="csv" type="file" accept=".csv"></label><label class="drop">🧰<b>恢复 JSON</b><span>恢复论文库备份</span><input id="restore" type="file" accept=".json"></label></div></section>
-</main><aside id="finder">
-<section class="panel finder"><div class="head"><div><span class="eyebrow">OPENALEX LIVE SEARCH</span><h2>自动找最新论文</h2><p>输入关键词，按发表时间抓取公开学术数据，一键加入论文库。</p></div></div><div class="finderGrid"><input id="findQ" placeholder="例如：Scrophularia metabolomics"><select id="days"><option value="30">近30天</option><option value="90">近90天</option><option value="180">近180天</option><option value="365">近1年</option><option value="3650">近10年</option></select><select id="limit"><option value="10">10篇</option><option value="20" selected>20篇</option><option value="30">30篇</option></select><button class="btn dark" id="findBtn">开始检索</button></div><div class="note">不走 OpenAI API，不消耗 AI token。当前是“网页打开时实时检索”，不是后台定时任务。</div><div class="findMeta" id="findMeta">尚未检索。</div><div class="row"><button class="btn green" id="importAll" disabled>全部导入</button><button class="btn soft" id="clearFound">清空结果</button></div><div class="loading" id="loading"><i></i> 正在扫描最新论文…</div><div class="results" id="results"></div></section>
-<section class="panel"><div class="head"><div><h2>监控词</h2><p>保存常用研究方向，之后一键刷新。</p></div></div><div class="watchAdd"><input id="watchQ" placeholder="保存一个监控词"><button class="btn" id="watchAdd">保存</button></div><label class="check"><input type="checkbox" id="autoWatch"> 打开网页时自动刷新第一个监控词</label><div id="watchList" class="watchList"></div></section>
-</aside></div>
-<footer>当前数据默认存于当前浏览器 · GitHub / Vercel 托管网页 · 下一阶段可接在线数据库与后台定时同步</footer>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f5f7fb">
+<title>论文雷达 · Research Radar</title>
+<link rel="stylesheet" href="./style.css">
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="brand-mark">R</span><div><b>论文雷达</b><small>Research Radar</small></div></div>
+    <nav class="nav" id="nav">
+      <button class="nav-item active" data-view="overview"><span>⌂</span><b>总览</b></button>
+      <button class="nav-item" data-view="library"><span>▦</span><b>论文库</b><em id="navPaperCount">0</em></button>
+      <button class="nav-item" data-view="discover"><span>◎</span><b>自动发现</b></button>
+      <button class="nav-item" data-view="watch"><span>◉</span><b>监控主题</b><em id="navWatchCount">0</em></button>
+      <button class="nav-item" data-view="import"><span>⇩</span><b>导入备份</b></button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="cloud-mini"><i></i><div><b>云端同步</b><small id="cloudMini">连接中…</small></div></div>
+      <button class="theme-btn" id="themeToggle" title="切换深色模式">◐ <span>切换主题</span></button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="mobile-menu" id="mobileMenu">☰</button>
+      <div class="search-global" id="globalSearchWrap"><span>⌕</span><input id="globalSearch" placeholder="搜索论文、作者、DOI、关键词…"><kbd>Ctrl K</kbd></div>
+      <div class="top-actions">
+        <button class="icon-btn" id="refreshCloud" title="刷新云端数据">↻</button>
+        <button class="btn primary" id="addTop">＋ 添加论文</button>
+      </div>
+    </header>
+
+    <section class="view active" id="view-overview">
+      <div class="hero-grid">
+        <section class="hero-card">
+          <div class="hero-copy">
+            <span class="live-pill"><i></i> AUTO SYNC ACTIVE</span>
+            <h1>你的科研文献情报台</h1>
+            <p>自动抓取、实时检索、Word 导入、重点标记和研究方向统计集中在一个工作台里。</p>
+            <div class="hero-actions"><button class="btn light" data-go="discover">开始找论文</button><button class="btn glass" data-go="library">打开论文库</button></div>
+          </div>
+          <div class="radar"><div class="radar-ring r1"></div><div class="radar-ring r2"></div><div class="radar-ring r3"></div><div class="radar-beam"></div><span class="radar-dot d1"></span><span class="radar-dot d2"></span><span class="radar-dot d3"></span><div class="radar-center">LIVE</div></div>
+        </section>
+        <section class="sync-card card">
+          <div class="section-label">同步状态</div>
+          <div class="sync-big"><i></i><span id="cloudStatusBig">正在连接云端</span></div>
+          <div class="sync-line"><span>自动抓取频率</span><b>每 6 小时</b></div>
+          <div class="sync-line"><span>当前数据源</span><b>OpenAlex + 本地库</b></div>
+          <div class="sync-line"><span>AI Token</span><b class="good">0</b></div>
+          <button class="btn soft full" id="syncNowOverview">立即刷新显示</button>
+        </section>
+      </div>
+
+      <section class="stats" id="stats">
+        <button class="stat card" data-filter="all"><span class="stat-icon">▤</span><div><small>论文总数</small><strong id="sTotal">0</strong><p id="lastUpdate">等待同步</p></div></button>
+        <button class="stat card" data-filter="high"><span class="stat-icon">★</span><div><small>高相关</small><strong id="sHigh">0</strong><p>优先精读</p></div></button>
+        <button class="stat card" data-filter="todo"><span class="stat-icon">◷</span><div><small>待读</small><strong id="sTodo">0</strong><p>等待处理</p></div></button>
+        <button class="stat card" data-filter="favorite"><span class="stat-icon">♥</span><div><small>已收藏</small><strong id="sFav">0</strong><p>本机收藏</p></div></button>
+      </section>
+
+      <div class="dashboard-grid">
+        <section class="card panel chart-card">
+          <div class="panel-head"><div><span class="section-label">研究分布</span><h2>主要研究方向</h2></div><button class="text-btn" data-go="library">查看全部 →</button></div>
+          <div id="categoryBars" class="bar-list"></div>
+        </section>
+        <section class="card panel chart-card">
+          <div class="panel-head"><div><span class="section-label">年份趋势</span><h2>论文发表年份</h2></div><span class="tiny" id="yearRangeText">—</span></div>
+          <div id="yearChart" class="year-chart"></div>
+        </section>
+        <section class="card panel recent-card">
+          <div class="panel-head"><div><span class="section-label">最近发现</span><h2>最新进入雷达</h2></div><button class="text-btn" data-go="library">更多 →</button></div>
+          <div id="recentList" class="recent-list"></div>
+        </section>
+        <section class="card panel focus-card">
+          <div class="panel-head"><div><span class="section-label">研究焦点</span><h2>快速进入方向</h2></div></div>
+          <div id="focusChips" class="focus-grid"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="view" id="view-library">
+      <div class="page-head"><div><span class="section-label">LIBRARY</span><h1>论文库</h1><p>云端自动抓取与本地导入统一展示。云端论文只读，本地论文可编辑。</p></div><div class="page-actions"><button class="btn soft" id="exportCsv">导出 CSV</button><button class="btn primary" id="add">＋ 添加论文</button></div></div>
+      <section class="card panel library-panel">
+        <div class="library-toolbar">
+          <div class="search-local"><span>⌕</span><input id="q" placeholder="在当前论文库搜索…"></div>
+          <select id="cat"><option value="">全部分类</option></select>
+          <select id="rel"><option value="">全部相关度</option><option>高</option><option>中</option><option>低</option></select>
+          <select id="st"><option value="">全部状态</option><option>待读</option><option>粗读</option><option>精读</option></select>
+          <select id="sourceFilter"><option value="">全部来源</option><option value="cloud">云端</option><option value="local">本地</option></select>
+          <select id="sortBy"><option value="new">最新发现</option><option value="year">年份从新到旧</option><option value="title">题目 A-Z</option></select>
+          <div class="view-switch"><button id="tableViewBtn" class="active">☷</button><button id="cardViewBtn">▦</button></div>
+        </div>
+        <div class="quick-filters" id="quickFilters"><button class="chip active" data-qf="all">全部</button><button class="chip" data-qf="high">高相关</button><button class="chip" data-qf="favorite">★ 收藏</button><button class="chip" data-qf="recent">近30天发现</button></div>
+        <div class="result-head"><b id="count">0 篇</b><span id="activeFilterText">全部论文</span><button class="text-btn" id="clearFilters">清除筛选</button></div>
+        <div class="table-wrap" id="tableWrap"><table><thead><tr><th></th><th>论文</th><th>年份</th><th>分类</th><th>相关度</th><th>状态</th><th>期刊</th><th>来源</th></tr></thead><tbody id="tb"></tbody></table></div>
+        <div class="paper-grid" id="paperGrid"></div>
+        <div class="empty" id="empty">暂无符合条件的论文。</div>
+      </section>
+    </section>
+
+    <section class="view" id="view-discover">
+      <div class="page-head"><div><span class="section-label">DISCOVER</span><h1>自动发现</h1><p>直接检索 OpenAlex 最新论文，不走 OpenAI API，不消耗 AI token。</p></div></div>
+      <div class="discover-layout">
+        <section class="card panel discover-box">
+          <div class="finder-title"><div class="scan-orb"><i></i></div><div><h2>实时论文扫描</h2><p>关键词越具体，结果越接近你的课题。</p></div></div>
+          <div class="preset-row" id="presetQueries"><button data-query="Scrophularia ningpoensis metabolomics">玄参代谢组</button><button data-query="Scrophularia ningpoensis microbiome endophyte">玄参微生物</button><button data-query="medicinal plant browning polyphenol oxidase">药材褐变</button></div>
+          <div class="finder-form"><input id="findQ" placeholder="例如：Scrophularia ningpoensis metabolomics"><div class="segmented" id="daySeg"><button data-days="30">30天</button><button data-days="90" class="active">90天</button><button data-days="365">1年</button><button data-days="3650">10年</button></div><select id="limit"><option value="10">10篇</option><option value="20" selected>20篇</option><option value="30">30篇</option></select><button class="btn primary" id="findBtn">扫描论文</button></div>
+          <div class="find-status"><span id="findMeta">尚未检索。</span><div><button class="text-btn" id="importAll" disabled>全部导入本地</button><button class="text-btn" id="clearFound">清空</button></div></div>
+          <div class="loading" id="loading"><i></i><span>正在扫描公开学术数据库…</span></div>
+          <div class="discover-results" id="results"></div>
+        </section>
+        <aside class="card panel discover-tips"><span class="section-label">检索建议</span><h2>更容易找到有效论文</h2><div class="tip"><b>01</b><p><strong>药材名 + 方法</strong><span>如 Scrophularia + metabolomics</span></p></div><div class="tip"><b>02</b><p><strong>机制 + 指标</strong><span>如 browning + PPO + POD</span></p></div><div class="tip"><b>03</b><p><strong>扩大年份再缩窄</strong><span>先看10年全貌，再切到近90天</span></p></div><div class="note-box"><b>实时检索 ≠ 后台定时</b><p>本页是你主动搜索；云端后台另有每6小时自动同步任务。</p></div></aside>
+      </div>
+    </section>
+
+    <section class="view" id="view-watch">
+      <div class="page-head"><div><span class="section-label">WATCHLIST</span><h1>监控主题</h1><p>保存你经常需要看的研究方向，点一下即可重新扫描。</p></div></div>
+      <div class="watch-layout"><section class="card panel"><div class="watch-create"><div><h2>新增本地监控词</h2><p>保存在当前浏览器，不会修改后台云端监控配置。</p></div><div class="watch-input"><input id="watchQ" placeholder="输入监控关键词"><button class="btn primary" id="watchAdd">保存</button></div><label class="switch"><input type="checkbox" id="autoWatch"><span></span>打开网页时自动刷新第一个监控词</label></div></section><section id="watchList" class="watch-cards"></section></div>
+    </section>
+
+    <section class="view" id="view-import">
+      <div class="page-head"><div><span class="section-label">IMPORT & BACKUP</span><h1>导入与备份</h1><p>Word / CSV 均在浏览器本地处理。当前手动导入的数据不会自动上传云端。</p></div></div>
+      <div class="import-grid">
+        <label class="import-card card"><span>W</span><h3>导入 Word</h3><p>支持 .docx 表格或“题目：xxx”结构。</p><b>选择 Word 文件 →</b><input id="docx" type="file" accept=".docx"></label>
+        <label class="import-card card"><span>CSV</span><h3>导入 CSV</h3><p>适合从 Excel 批量整理后导入。</p><b>选择 CSV 文件 →</b><input id="csv" type="file" accept=".csv"></label>
+        <label class="import-card card"><span>↥</span><h3>恢复 JSON</h3><p>恢复之前备份的本地论文库。</p><b>选择 JSON 文件 →</b><input id="restore" type="file" accept=".json"></label>
+        <button class="import-card card" id="backup"><span>↓</span><h3>备份 JSON</h3><p>导出当前本地论文记录与备注。</p><b>立即备份 →</b></button>
+      </div>
+      <section class="card panel format-guide"><h2>Word 推荐表头</h2><div class="format-tags"><span>题目</span><span>作者</span><span>年份</span><span>期刊</span><span>DOI/PMID</span><span>链接</span><span>分类</span><span>相关度</span><span>阅读状态</span><span>关键词</span><span>备注</span></div></section>
+    </section>
+  </main>
 </div>
-<div class="modal" id="modal"><div class="dialog"><div class="head"><h2 id="mt">添加论文</h2><button class="x" id="cancel">×</button></div><div class="form"><input id="fTitle" class="full" placeholder="论文题目"><input id="fAuthors" placeholder="作者"><input id="fYear" placeholder="年份"><input id="fJournal" placeholder="期刊"><input id="fDoi" placeholder="DOI / PMID"><input id="fUrl" class="full" placeholder="原文链接"><input id="fCat" placeholder="分类"><select id="fRel"><option>高</option><option selected>中</option><option>低</option></select><select id="fSt"><option selected>待读</option><option>粗读</option><option>精读</option></select><input id="fKeys" class="full" placeholder="关键词"><textarea id="fNotes" class="full" placeholder="备注 / 摘要 / 可借鉴方法"></textarea></div><div class="dialogBtns"><button class="btn" id="save">保存论文</button></div></div></div>
-<div class="toast" id="toast"></div><script src="./app.js"></script></body></html>
+
+<div class="modal" id="modal"><div class="dialog"><div class="dialog-head"><div><span class="section-label">LOCAL PAPER</span><h2 id="mt">添加论文</h2></div><button class="close-btn" id="cancel">×</button></div><div class="form"><label class="full">论文题目<input id="fTitle"></label><label>作者<input id="fAuthors"></label><label>年份<input id="fYear"></label><label>期刊<input id="fJournal"></label><label>DOI / PMID<input id="fDoi"></label><label class="full">原文链接<input id="fUrl"></label><label>分类<input id="fCat"></label><label>相关度<select id="fRel"><option>高</option><option selected>中</option><option>低</option></select></label><label>阅读状态<select id="fSt"><option selected>待读</option><option>粗读</option><option>精读</option></select></label><label class="full">关键词<input id="fKeys"></label><label class="full">备注 / 摘要<textarea id="fNotes"></textarea></label></div><div class="dialog-actions"><button class="btn soft" id="modalCancel2">取消</button><button class="btn primary" id="save">保存论文</button></div></div></div>
+
+<aside class="drawer" id="drawer"><div class="drawer-overlay" id="drawerOverlay"></div><div class="drawer-panel"><div class="drawer-head"><div><span class="source-badge" id="drawerSource">来源</span><span class="rel-badge" id="drawerRel">中</span></div><button class="close-btn" id="drawerClose">×</button></div><h2 id="drawerTitle">论文题目</h2><p class="drawer-authors" id="drawerAuthors"></p><div class="drawer-meta-grid"><div><small>年份</small><b id="drawerYear">—</b></div><div><small>期刊</small><b id="drawerJournal">—</b></div><div><small>分类</small><b id="drawerCat">—</b></div><div><small>DOI</small><b id="drawerDoi">—</b></div></div><div class="drawer-section"><h3>关键词</h3><div id="drawerKeywords" class="keyword-list"></div></div><div class="drawer-section"><h3>备注</h3><p id="drawerNotes" class="drawer-notes">暂无备注</p></div><div class="drawer-actions"><button class="btn soft" id="drawerFav">☆ 收藏</button><a class="btn primary" id="drawerOpen" target="_blank" rel="noopener">打开原文</a><button class="btn soft" id="drawerCopy">复制到本地</button></div></div></aside>
+
+<div class="command" id="command"><div class="command-box"><div class="command-search"><span>⌕</span><input id="commandInput" placeholder="快速搜索论文…"><kbd>Esc</kbd></div><div id="commandResults" class="command-results"></div></div></div>
+<div class="toast" id="toast"></div>
+<script src="./app.js"></script>
+</body>
+</html>
